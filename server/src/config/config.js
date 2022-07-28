@@ -22,4 +22,5 @@ module.exports = {
     appid: "",
     key: "",
   },
+  SALT: "coder_yupi",
 };
