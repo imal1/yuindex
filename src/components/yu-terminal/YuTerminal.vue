@@ -1,5 +1,9 @@
 <template>
-  <div class="yu-terminal-wrapper" :style="wrapperStyle">
+  <div
+    class="yu-terminal-wrapper"
+    :style="wrapperStyle"
+    @click="handleClickWrapper"
+  >
     <div ref="terminalRef" class="yu-terminal" :style="mainStyle">
       <a-collapse
         v-model:activeKey="activeKeys"
@@ -79,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, StyleValue, toRefs, watchEffect } from "vue";
+import { computed, onMounted, Ref, ref, StyleValue, toRefs, watchEffect } from "vue";
 import CommandOutputType = YuTerminal.CommandOutputType;
 import OutputType = YuTerminal.OutputType;
 import CommandInputType = YuTerminal.CommandInputType;
@@ -118,6 +122,7 @@ const outputList = ref<OutputType[]>([]);
 const commandList = ref<CommandOutputType[]>([]);
 const commandInputRef = ref();
 
+// 引入终端配置状态
 const configStore = useTerminalConfigStore();
 
 /**
@@ -317,6 +322,20 @@ const writeOutput = (newOutput: OutputType) => {
 const focusInput = () => {
   commandInputRef.value.focus();
 };
+/**
+ * 获取输入框是否聚焦
+ */
+const isInputFocused = () => {
+  return (commandInputRef.value.input as HTMLInputElement) == document.activeElement
+}
+/**
+ * 设置输入框的值
+ */
+const setTabCompletion = () => {
+  if(hint.value){
+    inputCommand.value.text =`${hint.value.split(' ')[0]}${hint.value.split(' ').length > 1 ? ' ' : ''}`
+  }
+}
 
 /**
  * 折叠 / 展开所有块
@@ -345,6 +364,8 @@ const terminal: TerminalType = {
   writeOutput,
   clear,
   focusInput,
+  isInputFocused,
+  setTabCompletion,
   doSubmitCommand,
   showNextCommand,
   showPrevCommand,
@@ -353,18 +374,38 @@ const terminal: TerminalType = {
   setCommandCollapsible,
 };
 
+/**
+ * 只执行一次
+ */
 onMounted(() => {
   registerShortcuts(terminal);
-  terminal.writeTextOutput(
-    `Welcome to YuIndex, coolest browser index for geeks!` +
-      `<a href="//github.com/liyupi/yuindex" target='_blank'> GitHub Open Source</a>`
-  );
-  terminal.writeTextOutput(
-    `Author <a href="//docs.qq.com/doc/DUFFRVWladXVjeUxW" target="_blank">coder_yupi</a>` +
-      `: please input 'help' to enjoy`
-  );
-  terminal.writeTextOutput("<br/>");
+  const { welcomeTexts } = configStore;
+  if (welcomeTexts?.length > 0) {
+    welcomeTexts.forEach((welcomeText) => {
+      terminal.writeTextOutput(welcomeText);
+    });
+  } else {
+    terminal.writeTextOutput(
+      `Welcome to YuIndex, coolest browser index for geeks!` +
+        `<a href="//github.com/liyupi/yuindex" target='_blank'> GitHub Open Source</a>`
+    );
+    terminal.writeTextOutput(
+      `Author <a href="//docs.qq.com/doc/DUFFRVWladXVjeUxW" target="_blank">coder_yupi</a>` +
+        `: please input 'help' to enjoy`
+    );
+    terminal.writeTextOutput("<br/>");
+  }
 });
+
+/**
+ * 当点击空白聚焦输入框
+ */
+function handleClickWrapper(event: Event): void {
+  //@ts-ignore
+  if (event.target.className === "yu-terminal") {
+    focusInput();
+  }
+}
 
 defineExpose({
   terminal,
